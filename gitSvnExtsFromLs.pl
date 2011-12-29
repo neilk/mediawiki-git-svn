@@ -14,8 +14,8 @@ use Cwd qw/getcwd/;
 my $user = 'neilk';
 my $minRev = 50000;
 
-
 # all else should be good below, if you have a typical layout
+debugSetup();
 
 my $ipDir = getcwd();
 my $gitExtDir = "$ipDir/extensionsGit";
@@ -24,7 +24,7 @@ my $baseUrl = "svn+ssh://$user\@svn.wikimedia.org/svnroot/mediawiki/trunk/extens
 makeExtReposFromLocalSettings( $ipDir, $gitExtDir, $baseUrl, $minRev );
 
 
-sub makeExtReposFromLocalSettings() {
+sub makeExtReposFromLocalSettings {
   my ($ipDir, $gitExtDir, $baseUrl, $minRev) = @_;
 
   my %ext = getExtensionsRequiredEarliestRevision( $ipDir, $baseUrl );
@@ -34,7 +34,8 @@ sub makeExtReposFromLocalSettings() {
   }
 
   while ( my ( $ext, $props ) = each %ext ) {
-     makeGitRepo( $gitExtDir, $ext, $props, $minRev );
+    debug( ">> make git repo for $ext" );
+    makeGitRepo( $gitExtDir, $ext, $props, $minRev );
   }
 }
 
@@ -56,11 +57,15 @@ sub getExtensionsRequiredEarliestRevision {
 
 sub getEarliestRev {
   my ( $extUrl ) = @_;
-  open my $fh, "|-", "svn log $extUrl" or die "can't get log for $extUrl -- $!";
+  debug( ">> get earliest rev for $extUrl" );
+  open my $fh, "-|", "svn log $extUrl" or die "can't get log for $extUrl -- $!";
   my $rev = undef;
+  my $debugTick = getDebugTicker(10);
   while (<$fh>) {
     /^r(\d+)/ and $rev = $1;
+    $debugTick->();
   }
+  debug("rev = $rev");
   close $fh or die $!;
   return $rev;
 }
@@ -70,12 +75,12 @@ sub getExtensionsRequired {
   my @ext = ();
   open my $fh, '<', "$ipDir/LocalSettings.php" or die "can't open LocalSettings -- $!";
   while (<$fh>) {
-    if ( $_ =~ /require\(/ ) {
-      $_ =~ /extensions\/(\w+)/;
+    if ( $_ =~ /require(?:_once)\s*\(.*\/extensions\/(\w+)/ ) {
       push @ext, $1;
     }
   }
   close $fh or die $!;
+  debug( "required extensions: " . (join ", ", @ext ) . "\n" );
   return @ext;
 }
 
@@ -92,6 +97,31 @@ sub makeGitRepo {
   chdir "$gitExtDir/$ext" or die $!;
   sys( "git svn rebase " );
 }
+
+sub debugSetup {
+  if ($ENV{'DEBUG'} ) {
+    my $old_fh = select(STDERR);
+    $| = 1;
+    select($old_fh);
+  }
+}
+
+sub debug {
+  if ( $ENV{'DEBUG'} ) {
+    warn( $_[0] . "\n" );
+  }
+}
+
+sub getDebugTicker {
+  my ($count) = @_;
+  my $iter = 0;
+  return sub {
+    if ( $iter++ % $count == 0 && $ENV{'DEBUG'} ) {
+      print STDERR ".";
+    }
+  }
+}
+
 
 sub sys {
   my ($cmd) = @_;
