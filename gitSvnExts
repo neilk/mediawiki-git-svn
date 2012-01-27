@@ -12,65 +12,45 @@ use strict;
 use warnings qw/all/;
 
 use Cwd qw/getcwd/;
-use Getopt::Long;
+use Getopt::Long qw/GetOptions/;
+use File::Path qw/rmtree/;
 
 # configuration
-my $minRev = 50000;
 
 # all else should be good below, if you have a typical layout
 debugSetup();
 
+# don't fetch changes earlier than this revision
+my $minRev = 50000;
+
+# who am i?
 my $user = $ENV{"USER"};
+
+# where to put the extensions
 my $ipDir = getcwd();
 my $extDir = "$ipDir/extensions";
+
+# where to get svn changes from
 my $baseUrl = "svn+ssh://$user\@svn.wikimedia.org/svnroot/mediawiki/trunk/extensions";
 
-my $localSettings = 0;
+# whether the git repo should delete a directory if exists already
+my $replace = 0;
 
 my $result = GetOptions( 
   "user=s" => \$user,
-  "ip=s" => \$ipDir, 
   "extdir=s" => \$extDir,
   "baseurl=s" => \$baseUrl,
-  "user=s" => \$user,
   "minrev=i" => \$minRev,
-  "localsettings" => \$localSettings,
+  "replace" => \$replace
 );
 
-if ( $localSettings ) {  
-  makeExtReposFromLocalSettings( $ipDir, $extDir, $baseUrl, $minRev );
-} else {
-  makeExtRepos( \@ARGV, $baseUrl, $extDir, $minRev );
-}
+makeExtRepos( \@ARGV, $baseUrl, $extDir, $minRev );
 
 # the end
 
 
-
-sub makeExtReposFromLocalSettings {
-  my ($ipDir, $extDir, $baseUrl, $minRev) = @_;
-  my @extFromLocalSettings = getExtensionsFromLocalSettings( $ipDir );
-  makeExtRepos( \@extFromLocalSettings, $baseUrl, $extDir . "git", $minRev );
-}
-
-sub getExtensionsFromLocalSettings { 
-  my ($ipDir) = @_; 
-  my @ext = ();
-  my $localSettingsFile = "$ipDir/LocalSettings.php";
-  open my $fh, '<', $localSettingsFile or die "can't open LocalSettings -- $!";
-  while (<$fh>) {
-    if ( $_ =~ /require(?:_once)\s*\(.*\/extensions\/(\w+)/ ) {
-      push @ext, $1;
-    }
-  }
-  close $fh or die $!;
-  debug( "required extensions: " . (join ", ", @ext ) . "\n" );
-  return @ext;
-}
-
-
 sub makeExtRepos {
-  my ( $exts, $baseUrl, $extDir, $minRev ) = @_;
+  my ( $exts, $baseUrl, $extDir, $minRev, $replace ) = @_;
  
   if ( ! -d $extDir ) {
     mkdir $extDir or die $!;
@@ -80,7 +60,7 @@ sub makeExtRepos {
 
   while ( my ( $ext, $props ) = each %ext ) {
     debug( ">> make git repo for $ext" );
-    makeGitRepo( $extDir, $ext, $props, $minRev );
+    makeGitRepo( $extDir, $ext, $props, $minRev, $replace );
   }
 
 }
@@ -116,7 +96,18 @@ sub getEarliestRev {
 }
 
 sub makeGitRepo {
-  my ($extDir, $ext, $props, $minRev) = @_;
+  my ($extDir, $ext, $props, $minRev, $replace) = @_;
+
+  my $repoDir = "$extDir/$ext";
+  if (-e $repoDir) {
+    if ($replace) { 
+      rmtree($repoDir); 
+    } else {
+      warn "$repoDir exists already. Skipping. Use --replace to replace it\n";
+      return;
+    }
+  }
+
   my $url = $props->{'url'};
   my $rev = $props->{'rev'};
   chdir $extDir or die $!;

@@ -1,7 +1,15 @@
-A utility to help git-svn users who commit to MediaWiki. 
+Some utilities to help git-svn users who commit to MediaWiki. 
 
-For instance, to help create an extensions directory with one git repo for each extension that you need. Or to install new 
-extensions from git into that directory.
+For instance, you can cd to your $IP directory ( the one containing your LocalSettings.php ) and execute this:
+
+    extsFromLs LocalSettings.php | xargs gitSvnExts --replace
+
+Assuming you have a typical layout (your extensions are in "extensions") this will replace all your extension directories
+with git repos. CAUTION: using --replace blows away any local changes.
+
+If you just want a new git repo for an extension, in that extensions directory:
+
+    gitSvnExts MyNewExtension
 
 This will be obsolete when MediaWiki makes the final move to git, of course, since a similar structure will exist already.
 

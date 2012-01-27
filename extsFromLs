@@ -1,0 +1,15 @@
+#!/usr/bin/env perl
+
+# execute this script with your LocalSettings.php as the argument
+# outputs list of extensions you are using to STDOUT
+
+my %ext;
+
+while (<>) {
+  if ( $_ =~ /require(?:_once)\s*\(.*\/extensions\/(\w+)/ ) {
+    $ext{$1} = 1;
+  }
+}
+
+print map { "$_\n" } sort keys %ext;
+
