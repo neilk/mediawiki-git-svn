@@ -1,15 +1,23 @@
-Some utilities to help git-svn users who commit to MediaWiki. 
+This will be obsolete when MediaWiki makes the final move to git. In the meantime here are some utilities to help git-svn users develop extensions.
 
-For instance, you can cd to your $IP directory ( the one containing your LocalSettings.php ) and execute this:
+Many svn committers have the entire extensions directory in their tree. This is impractical with git, because you must download every revision since
+the beginning of time. So, you really want a sparse set of extensions that you care about.
+
+So, here's an incantation to get all the extensions currently require'd in your LocalSettings:
 
     extsFromLs LocalSettings.php | xargs gitSvnExts --replace
 
-Assuming you have a typical layout (your extensions are in "extensions") this will replace all your extension directories
-with git repos. CAUTION: using --replace blows away any local changes.
+Assuming you have a typical layout (your extensions are in "extensions") this will replace all the extensions you are using with
+git repos. 
 
-If you just want a new git repo for an extension, in that extensions directory:
+CAUTION: using --replace blows away any local changes.
+
+If you just want to download a new git repo for an extension, cd to $IP and say:
 
     gitSvnExts MyNewExtension
 
-This will be obsolete when MediaWiki makes the final move to git, of course, since a similar structure will exist already.
+gitSvnExts has a number of options. To read the documentation, just type:
+
+    gitSvnExts
+
 

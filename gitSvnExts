@@ -1,12 +1,21 @@
 #!/usr/bin/env perl
 
-# execute this script in $IP, i.e. the dir containing your MediaWiki LocalSettings.php
-#
-# with arguments on the command line, will simply install those extensions into extensions
-# 
-# if executed with flag --localsettings then it will obtain a list of extensions to get from LocalSettings.php
-# and create the extensions in $IP/extensionsgit
+=for pod
+gitSvnExts - Utility to create git repos for MediaWiki extensions.
 
+=head1 SYNOPSIS
+
+gitSvnExts [options] [extensionName...]
+
+=head2 DESCRIPTION
+This should be executed from the command line at the directory usually called $IP, i.e.,
+the one containing your MediaWiki LocalSettings.php.
+
+=head2 OPTIONS
+
+=over 8
+
+=cut
 
 use strict;
 use warnings qw/all/;
@@ -14,35 +23,67 @@ use warnings qw/all/;
 use Cwd qw/getcwd/;
 use Getopt::Long qw/GetOptions/;
 use File::Path qw/rmtree/;
+use Pod::Usage qw/pod2usage/;
 
 # configuration
 
 # all else should be good below, if you have a typical layout
 debugSetup();
 
-# don't fetch changes earlier than this revision
+=item B<--help>
+
+Print a help message and exit.
+=cut
+my $help = 0;
+
+=item B<--minrev>
+
+Fetching every single revision is sometimes impractical. So, this is the minimum revision to fetch. Defaults to 50000.
+=cut
 my $minRev = 50000;
 
-# who am i?
+=item B<--user>
+
+Your username at the SVN server. Defaults to local username.
+=cut
 my $user = $ENV{"USER"};
 
-# where to put the extensions
+=item B<--extdir>
+
+Where to put the extensions. Defaults to 'extensions' in the current working directory.
+=cut
 my $ipDir = getcwd();
 my $extDir = "$ipDir/extensions";
 
-# where to get svn changes from
+=item B<--baseurl>
+
+The base SVN url to fetch extensions from.
+=cut
 my $baseUrl = "svn+ssh://$user\@svn.wikimedia.org/svnroot/mediawiki/trunk/extensions";
 
-# whether the git repo should delete a directory if exists already
+=item B<--replace>
+
+If present, will delete an existing directory in favor of the new repository.
+=cut
 my $replace = 0;
+
+=for pod
+=back
+=cut
 
 my $result = GetOptions( 
   "user=s" => \$user,
   "extdir=s" => \$extDir,
   "baseurl=s" => \$baseUrl,
   "minrev=i" => \$minRev,
-  "replace" => \$replace
+  "replace" => \$replace,
+  "help|?" => \$help,
 );
+
+if ( $help or !@ARGV ) {
+  pod2usage(1);
+  exit;
+}
 
 makeExtRepos( \@ARGV, $baseUrl, $extDir, $minRev );
 
@@ -150,3 +191,5 @@ sub sys {
   warn "$cmd...\n";
   system( $cmd ) and die $!;
 }
+
+
